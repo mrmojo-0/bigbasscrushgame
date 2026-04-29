@@ -1,0 +1,40 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import Header from '@components/layout/Header.astro';
+import Footer from '@components/layout/Footer.astro';
+import type { Locale } from '@i18n/config';
+import type { PageId } from '@i18n/slugs';
+
+interface Props {
+  locale: Locale;
+  pageId: PageId;
+  title: string;
+  description: string;
+  ogImage?: string;
+  ogType?: string;
+  canonicalPath?: string;
+  schema?: object[];
+}
+
+const { locale, pageId, title, description, ogImage, ogType, canonicalPath, schema } = Astro.props;
+---
+
+<BaseLayout
+  locale={locale}
+  pageId={pageId}
+  title={title}
+  description={description}
+  ogImage={ogImage}
+  ogType={ogType}
+  canonicalPath={canonicalPath}
+  schema={schema}
+>
+  <Header locale={locale} currentPage={pageId} />
+
+  <!-- Main content with top padding for fixed header -->
+  <main class="pt-16 min-h-screen">
+    <slot />
+  </main>
+
+  <Footer locale={locale} />
+</BaseLayout>

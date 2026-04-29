@@ -1,0 +1,275 @@
+---
+export const prerender = false;
+
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Expert Profiles" currentPage="experts">
+  <p class="text-gray-400 text-sm mb-6">Manage expert reviewer profiles for each language. Click a language card to edit the expert for that locale.</p>
+
+  <!-- Language Grid -->
+  <div id="experts-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-8">
+    <!-- Populated by JS -->
+    <div class="col-span-full text-center py-8 text-gray-500 text-sm">Loading experts...</div>
+  </div>
+
+  <!-- Edit Form (hidden by default) -->
+  <div id="expert-form-panel" class="hidden">
+    <div class="bg-ocean-800/50 border border-ocean-600/20 rounded-xl p-6">
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="text-lg font-semibold text-white">
+          Edit Expert: <span id="form-lang-display" class="text-accent-400"></span>
+        </h2>
+        <button id="btn-cancel-edit" class="text-gray-400 hover:text-white text-sm transition-colors">Cancel</button>
+      </div>
+
+      <form id="expert-form" class="space-y-4">
+        <input type="hidden" id="expert-form-id" value="" />
+        <input type="hidden" id="expert-form-lang" value="" />
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm text-gray-400 mb-1.5">Name *</label>
+            <input type="text" id="expert-name" required class="w-full bg-ocean-900 border border-ocean-600 rounded-lg px-4 py-2.5 text-white text-sm focus:border-accent-500 outline-none" placeholder="Dr. James Wilson" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-400 mb-1.5">Title</label>
+            <input type="text" id="expert-title" class="w-full bg-ocean-900 border border-ocean-600 rounded-lg px-4 py-2.5 text-white text-sm focus:border-accent-500 outline-none" placeholder="iGaming Expert & Analyst" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm text-gray-400 mb-1.5">Bio *</label>
+          <textarea id="expert-bio" required rows="4" class="w-full bg-ocean-900 border border-ocean-600 rounded-lg px-4 py-2.5 text-white text-sm focus:border-accent-500 outline-none resize-y" placeholder="Expert bio text..."></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm text-gray-400 mb-1.5">Credentials (comma-separated)</label>
+            <input type="text" id="expert-credentials" class="w-full bg-ocean-900 border border-ocean-600 rounded-lg px-4 py-2.5 text-white text-sm focus:border-accent-500 outline-none" placeholder="Licensed reviewer, 10+ years experience" />
+          </div>
+          <div>
+            <label class="block text-sm text-gray-400 mb-1.5">Avatar URL</label>
+            <input type="text" id="expert-avatar" class="w-full bg-ocean-900 border border-ocean-600 rounded-lg px-4 py-2.5 text-white text-sm focus:border-accent-500 outline-none" placeholder="/images/experts/avatar.webp" />
+          </div>
+        </div>
+
+        <!-- Avatar Preview -->
+        <div id="avatar-preview-container" class="hidden">
+          <label class="block text-sm text-gray-400 mb-1.5">Avatar Preview</label>
+          <img id="avatar-preview" class="w-16 h-16 rounded-full object-cover border-2 border-ocean-600" src="" alt="Avatar preview" />
+        </div>
+
+        <div class="flex justify-end gap-3 pt-4 border-t border-ocean-600/20">
+          <button type="button" id="btn-cancel-form" class="px-4 py-2.5 rounded-lg text-sm text-gray-400 hover:text-white bg-ocean-700 hover:bg-ocean-600 transition-colors">
+            Cancel
+          </button>
+          <button type="submit" class="px-4 py-2.5 rounded-lg text-sm font-medium text-white bg-accent-500 hover:bg-accent-600 transition-colors">
+            Save Expert
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  const LANGUAGES: Record<string, { name: string; flag: string }> = {
+    en: { name: 'English', flag: '🇬🇧' },
+    ru: { name: 'Russian', flag: '🇷🇺' },
+    de: { name: 'German', flag: '🇩🇪' },
+    fr: { name: 'French', flag: '🇫🇷' },
+    es: { name: 'Spanish', flag: '🇪🇸' },
+    pt: { name: 'Portuguese', flag: '🇵🇹' },
+    it: { name: 'Italian', flag: '🇮🇹' },
+    nl: { name: 'Dutch', flag: '🇳🇱' },
+    pl: { name: 'Polish', flag: '🇵🇱' },
+    cs: { name: 'Czech', flag: '🇨🇿' },
+    sk: { name: 'Slovak', flag: '🇸🇰' },
+    hu: { name: 'Hungarian', flag: '🇭🇺' },
+    ro: { name: 'Romanian', flag: '🇷🇴' },
+    bg: { name: 'Bulgarian', flag: '🇧🇬' },
+    hr: { name: 'Croatian', flag: '🇭🇷' },
+    sl: { name: 'Slovenian', flag: '🇸🇮' },
+    sr: { name: 'Serbian', flag: '🇷🇸' },
+    uk: { name: 'Ukrainian', flag: '🇺🇦' },
+    tr: { name: 'Turkish', flag: '🇹🇷' },
+    el: { name: 'Greek', flag: '🇬🇷' },
+    ar: { name: 'Arabic', flag: '🇸🇦' },
+    he: { name: 'Hebrew', flag: '🇮🇱' },
+    hi: { name: 'Hindi', flag: '🇮🇳' },
+    bn: { name: 'Bengali', flag: '🇧🇩' },
+    ja: { name: 'Japanese', flag: '🇯🇵' },
+    ko: { name: 'Korean', flag: '🇰🇷' },
+    zh: { name: 'Chinese', flag: '🇨🇳' },
+    th: { name: 'Thai', flag: '🇹🇭' },
+    vi: { name: 'Vietnamese', flag: '🇻🇳' },
+    id: { name: 'Indonesian', flag: '🇮🇩' },
+    ms: { name: 'Malay', flag: '🇲🇾' },
+    fil: { name: 'Filipino', flag: '🇵🇭' },
+    sv: { name: 'Swedish', flag: '🇸🇪' },
+    no: { name: 'Norwegian', flag: '🇳🇴' },
+    da: { name: 'Danish', flag: '🇩🇰' },
+    fi: { name: 'Finnish', flag: '🇫🇮' },
+    et: { name: 'Estonian', flag: '🇪🇪' },
+    lv: { name: 'Latvian', flag: '🇱🇻' },
+    lt: { name: 'Lithuanian', flag: '🇱🇹' },
+    ka: { name: 'Georgian', flag: '🇬🇪' },
+  };
+
+  let expertsMap: Record<string, any> = {};
+
+  async function loadExperts() {
+    try {
+      const res = await fetch('/api/experts/');
+      const data = await res.json();
+      const expertsList = data.experts || [];
+
+      expertsMap = {};
+      expertsList.forEach((e: any) => {
+        expertsMap[e.lang] = e;
+      });
+
+      renderGrid();
+    } catch (err) {
+      document.getElementById('experts-grid')!.innerHTML =
+        '<div class="col-span-full text-center py-8 text-crash-red text-sm">Failed to load experts</div>';
+    }
+  }
+
+  function renderGrid() {
+    const grid = document.getElementById('experts-grid')!;
+    const langKeys = Object.keys(LANGUAGES);
+
+    grid.innerHTML = langKeys.map(lang => {
+      const info = LANGUAGES[lang];
+      const expert = expertsMap[lang];
+      const hasExpert = !!expert;
+
+      return `
+        <button onclick="selectLanguage('${lang}')"
+          class="flex flex-col items-center gap-2 p-4 rounded-xl border transition-all hover:border-accent-500/50 hover:bg-ocean-800/80
+            ${hasExpert ? 'bg-ocean-800/50 border-accent-500/20' : 'bg-ocean-800/30 border-ocean-600/20'}">
+          <span class="text-2xl">${info.flag}</span>
+          <span class="text-xs font-medium ${hasExpert ? 'text-white' : 'text-gray-400'}">${info.name}</span>
+          ${hasExpert
+            ? `<span class="text-xs text-accent-400 truncate max-w-full">${escapeHtml(expert.name)}</span>`
+            : '<span class="text-xs text-gray-600">Not set</span>'
+          }
+        </button>
+      `;
+    }).join('');
+  }
+
+  function escapeHtml(str: string): string {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // Select language to edit
+  (window as any).selectLanguage = function(lang: string) {
+    const info = LANGUAGES[lang];
+    const expert = expertsMap[lang];
+
+    document.getElementById('form-lang-display')!.textContent = `${info.flag} ${info.name}`;
+    (document.getElementById('expert-form-lang') as HTMLInputElement).value = lang;
+
+    if (expert) {
+      (document.getElementById('expert-form-id') as HTMLInputElement).value = String(expert.id);
+      (document.getElementById('expert-name') as HTMLInputElement).value = expert.name || '';
+      (document.getElementById('expert-title') as HTMLInputElement).value = expert.title || '';
+      (document.getElementById('expert-bio') as HTMLTextAreaElement).value = expert.bio || '';
+
+      let creds = expert.credentials || '';
+      if (typeof creds !== 'string') {
+        try { creds = JSON.parse(creds).join(', '); } catch { creds = String(creds); }
+      }
+      (document.getElementById('expert-credentials') as HTMLInputElement).value = creds;
+      (document.getElementById('expert-avatar') as HTMLInputElement).value = expert.avatar_path || expert.avatarPath || '';
+    } else {
+      (document.getElementById('expert-form-id') as HTMLInputElement).value = '';
+      (document.getElementById('expert-name') as HTMLInputElement).value = '';
+      (document.getElementById('expert-title') as HTMLInputElement).value = '';
+      (document.getElementById('expert-bio') as HTMLTextAreaElement).value = '';
+      (document.getElementById('expert-credentials') as HTMLInputElement).value = '';
+      (document.getElementById('expert-avatar') as HTMLInputElement).value = '';
+    }
+
+    updateAvatarPreview();
+    document.getElementById('expert-form-panel')!.classList.remove('hidden');
+    document.getElementById('expert-form-panel')!.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  function updateAvatarPreview() {
+    const url = (document.getElementById('expert-avatar') as HTMLInputElement).value;
+    const container = document.getElementById('avatar-preview-container')!;
+    const img = document.getElementById('avatar-preview') as HTMLImageElement;
+
+    if (url) {
+      img.src = url;
+      container.classList.remove('hidden');
+    } else {
+      container.classList.add('hidden');
+    }
+  }
+
+  document.getElementById('expert-avatar')?.addEventListener('input', updateAvatarPreview);
+
+  function cancelEdit() {
+    document.getElementById('expert-form-panel')!.classList.add('hidden');
+    (document.getElementById('expert-form') as HTMLFormElement).reset();
+  }
+
+  document.getElementById('btn-cancel-edit')?.addEventListener('click', cancelEdit);
+  document.getElementById('btn-cancel-form')?.addEventListener('click', cancelEdit);
+
+  // Save expert
+  document.getElementById('expert-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const id = (document.getElementById('expert-form-id') as HTMLInputElement).value;
+    const lang = (document.getElementById('expert-form-lang') as HTMLInputElement).value;
+    const credentialsRaw = (document.getElementById('expert-credentials') as HTMLInputElement).value;
+    const credentials = credentialsRaw.split(',').map(s => s.trim()).filter(Boolean);
+
+    const payload = {
+      lang,
+      name: (document.getElementById('expert-name') as HTMLInputElement).value,
+      title: (document.getElementById('expert-title') as HTMLInputElement).value || null,
+      bio: (document.getElementById('expert-bio') as HTMLTextAreaElement).value,
+      credentials: JSON.stringify(credentials),
+      avatarPath: (document.getElementById('expert-avatar') as HTMLInputElement).value || null,
+    };
+
+    try {
+      let res;
+      if (id) {
+        res = await fetch(`/api/experts/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        res = await fetch('/api/experts/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      if (res.ok) {
+        cancelEdit();
+        await loadExperts();
+      } else {
+        const data = await res.json();
+        alert('Save failed: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      alert('Network error while saving expert');
+    }
+  });
+
+  // Init
+  loadExperts();
+</script>

@@ -1,0 +1,16 @@
+{
+  "name": "Big Bass Crash Game",
+  "short_name": "BB Crash",
+  "description": "Play Big Bass Crash - The Ultimate Fishing Crash Game by Pragmatic Play",
+  "start_url": "/en/",
+  "display": "standalone",
+  "background_color": "#0a1628",
+  "theme_color": "#22c55e",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

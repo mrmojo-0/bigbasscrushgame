@@ -1,0 +1,85 @@
+---
+import { type Locale } from '@i18n/config';
+import { t, getNavLinks, type PageId } from '@i18n/utils';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const navLinks = getNavLinks(locale);
+const year = new Date().getFullYear();
+---
+
+<footer class="bg-ocean-950 border-t border-ocean-600/20 mt-16">
+  <!-- Wave decoration -->
+  <div class="relative -mt-px">
+    <svg class="w-full h-12 text-ocean-950" viewBox="0 0 1440 48" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+      <path d="M0 48h1440V0c-240 24-480 48-720 48S240 24 0 0v48z" fill="currentColor" />
+    </svg>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+      <!-- Brand -->
+      <div>
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-8 h-8 bg-gradient-cta rounded-lg flex items-center justify-center text-white font-bold text-sm">
+            BB
+          </div>
+          <span class="text-lg font-bold text-white">BigBassCrashGame</span>
+        </div>
+        <p class="text-sm text-gray-400 leading-relaxed">
+          {t(locale, 'site.tagline')}
+        </p>
+      </div>
+
+      <!-- Navigation -->
+      <div>
+        <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">
+          {t(locale, 'nav.home')}
+        </h3>
+        <nav class="flex flex-col gap-2">
+          {navLinks.map(link => (
+            <a href={link.path} class="text-sm text-gray-400 hover:text-accent-400 transition-colors">
+              {link.label}
+            </a>
+          ))}
+        </nav>
+      </div>
+
+      <!-- Legal -->
+      <div>
+        <h3 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">
+          {t(locale, 'footer.about')}
+        </h3>
+        <div class="flex flex-col gap-2 text-sm text-gray-400">
+          <p>{t(locale, 'footer.responsible')}</p>
+          <p>{t(locale, 'footer.privacy')}</p>
+          <p>{t(locale, 'footer.terms')}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 18+ Badge & Disclaimer -->
+    <div class="border-t border-ocean-600/20 pt-8">
+      <div class="flex items-start gap-4 mb-6">
+        <div class="flex-shrink-0 w-12 h-12 rounded-full bg-crash-red/20 border-2 border-crash-red flex items-center justify-center">
+          <span class="text-crash-red font-bold text-sm">18+</span>
+        </div>
+        <p class="text-xs text-gray-500 leading-relaxed">
+          {t(locale, 'footer.disclaimer')}
+        </p>
+      </div>
+
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-600">
+        <p>&copy; {year} BigBassCrashGame.com</p>
+        <div class="flex items-center gap-4">
+          <span>Pragmatic Play</span>
+          <span>&bull;</span>
+          <span>Big Bass Crash</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>

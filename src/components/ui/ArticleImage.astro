@@ -1,0 +1,28 @@
+---
+interface Props {
+  src: string;
+  alt: string;
+  class?: string;
+  width?: number;
+  height?: number;
+  eager?: boolean;
+}
+const { src, alt, class: className, width, height, eager = false } = Astro.props;
+
+const webpSrc = src.replace(/\.(jpg|jpeg|png)$/, '.webp');
+---
+
+<figure class:list={["my-8 rounded-xl overflow-hidden", className]}>
+  <picture>
+    <source srcset={webpSrc} type="image/webp" />
+    <img
+      src={src}
+      alt={alt}
+      width={width}
+      height={height}
+      loading={eager ? "eager" : "lazy"}
+      decoding="async"
+      class="w-full h-auto rounded-xl"
+    />
+  </picture>
+</figure>

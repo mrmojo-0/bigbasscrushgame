@@ -1,0 +1,129 @@
+---
+export const prerender = false;
+
+import { validateSession, SESSION_COOKIE_NAME } from '../../lib/auth/session';
+
+// Redirect to dashboard if already logged in
+const sessionToken = Astro.cookies.get(SESSION_COOKIE_NAME)?.value;
+if (validateSession(sessionToken)) {
+  return Astro.redirect('/admin/', 302);
+}
+---
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Admin Login — BigBassCrashGame</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      background: linear-gradient(180deg, #050d1a 0%, #0a1628 50%, #0f2140 100%);
+      color: #f8fafc;
+      font-family: 'Inter', system-ui, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .login-box {
+      width: 100%;
+      max-width: 400px;
+      padding: 2rem;
+    }
+    .logo {
+      width: 64px; height: 64px;
+      background: linear-gradient(135deg, #16a34a, #22c55e, #4ade80);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1.5rem;
+      font-size: 1.5rem; font-weight: 800; color: white;
+    }
+    h1 { text-align: center; font-size: 1.5rem; margin: 0 0 0.5rem; }
+    .subtitle { text-align: center; color: #94a3b8; font-size: 0.875rem; margin-bottom: 2rem; }
+    label { display: block; font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.5rem; }
+    input {
+      width: 100%; padding: 0.75rem 1rem;
+      background: #0f2140; border: 1px solid #1e3a5f; border-radius: 12px;
+      color: white; font-size: 1rem; outline: none; transition: border-color 0.2s;
+    }
+    input:focus { border-color: #22c55e; }
+    .field { margin-bottom: 1.5rem; }
+    button {
+      width: 100%; padding: 0.875rem;
+      background: linear-gradient(135deg, #16a34a, #22c55e, #4ade80);
+      color: white; font-weight: 600; font-size: 1rem;
+      border: none; border-radius: 12px; cursor: pointer;
+      transition: box-shadow 0.2s, transform 0.1s;
+    }
+    button:hover { box-shadow: 0 0 20px rgba(34, 197, 94, 0.3); }
+    button:active { transform: scale(0.98); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .error {
+      background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5; padding: 0.75rem; border-radius: 8px; font-size: 0.875rem;
+      margin-bottom: 1rem; display: none; text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <div class="logo">BB</div>
+    <h1>Admin Panel</h1>
+    <p class="subtitle">BigBassCrashGame.com</p>
+
+    <div id="error" class="error"></div>
+
+    <form id="login-form">
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="Enter admin password" required autofocus />
+      </div>
+      <button type="submit" id="submit-btn">Sign In</button>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById('login-form');
+    const errorEl = document.getElementById('error');
+    const submitBtn = document.getElementById('submit-btn');
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const password = (document.getElementById('password') as HTMLInputElement).value;
+
+      submitBtn!.textContent = 'Signing in...';
+      (submitBtn as HTMLButtonElement).disabled = true;
+      errorEl!.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password }),
+        });
+
+        if (res.ok) {
+          window.location.href = '/admin/';
+        } else {
+          const data = await res.json();
+          errorEl!.textContent = data.error || 'Invalid password';
+          errorEl!.style.display = 'block';
+        }
+      } catch (err) {
+        errorEl!.textContent = 'Connection error. Please try again.';
+        errorEl!.style.display = 'block';
+      } finally {
+        submitBtn!.textContent = 'Sign In';
+        (submitBtn as HTMLButtonElement).disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

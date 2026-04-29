@@ -1,0 +1,645 @@
+---
+import PageLayout from '../../layouts/PageLayout.astro';
+import CasinoTopList from '../../components/casino/CasinoTopList.astro';
+import FaqSection from '../../components/content/FaqSection.astro';
+import CommentSection from '../../components/interactive/CommentSection.tsx';
+import GameDemo from '../../components/interactive/GameDemo.tsx';
+import ExpertProfile from '../../components/content/ExpertProfile.astro';
+import WaveDecoration from '../../components/ui/WaveDecoration.astro';
+import Button from '../../components/ui/Button.astro';
+import Breadcrumbs from '../../components/seo/Breadcrumbs.astro';
+import ArticleImage from '../../components/ui/ArticleImage.astro';
+import { ALL_LOCALES, type Locale } from '../../i18n/config';
+import { t, getPagePath } from '../../i18n/utils';
+import { PAGE_SLUGS, type PageId } from '../../i18n/slugs';
+import { websiteSchema, articleSchema, faqSchema, reviewSchema, softwareAppSchema } from '../../lib/seo/schema-generators';
+import { getCasinosForLocale } from '../../lib/db/queries';
+import { db } from '../../lib/db/index';
+import { experts } from '../../lib/db/schema';
+import { eq } from 'drizzle-orm';
+
+export function getStaticPaths() {
+  const pages: PageId[] = ['play-free', 'where-to-play', 'review'];
+  const paths = [];
+
+  for (const pageId of pages) {
+    for (const locale of ALL_LOCALES) {
+      const slug = PAGE_SLUGS[pageId][locale];
+      if (slug) {
+        paths.push({
+          params: { lang: locale, slug: slug },
+          props: { locale, pageId },
+        });
+      }
+    }
+  }
+
+  return paths;
+}
+
+interface Props {
+  locale: Locale;
+  pageId: PageId;
+}
+
+const { locale, pageId } = Astro.props;
+
+// Fetch casinos from DB ordered by locale-specific sort order
+const casinoResults = getCasinosForLocale(locale);
+
+// Page-specific content configuration
+const pageConfig = {
+  'play-free': {
+    title: t(locale, 'demo.title'),
+    description: t(locale, 'demo.subtitle'),
+    ogImage: '/images/og/play-free.jpg',
+    faqs: [
+      { q: t(locale, 'faq.playFree.q1'), a: t(locale, 'faq.playFree.a1') },
+      { q: t(locale, 'faq.playFree.q2'), a: t(locale, 'faq.playFree.a2') },
+      { q: t(locale, 'faq.playFree.q3'), a: t(locale, 'faq.playFree.a3') },
+      { q: t(locale, 'faq.playFree.q4'), a: t(locale, 'faq.playFree.a4') },
+      { q: t(locale, 'faq.playFree.q5'), a: t(locale, 'faq.playFree.a5') },
+    ],
+  },
+  'where-to-play': {
+    title: t(locale, 'whereToPlay.title'),
+    description: t(locale, 'whereToPlay.subtitle'),
+    ogImage: '/images/og/where-to-play.jpg',
+    faqs: [
+      { q: t(locale, 'faq.whereToPlay.q1'), a: t(locale, 'faq.whereToPlay.a1') },
+      { q: t(locale, 'faq.whereToPlay.q2'), a: t(locale, 'faq.whereToPlay.a2') },
+      { q: t(locale, 'faq.whereToPlay.q3'), a: t(locale, 'faq.whereToPlay.a3') },
+      { q: t(locale, 'faq.whereToPlay.q4'), a: t(locale, 'faq.whereToPlay.a4') },
+      { q: t(locale, 'faq.whereToPlay.q5'), a: t(locale, 'faq.whereToPlay.a5') },
+    ],
+  },
+  'review': {
+    title: t(locale, 'review.title'),
+    description: t(locale, 'review.description'),
+    ogImage: '/images/og/review.jpg',
+    faqs: [
+      { q: t(locale, 'faq.review.q1'), a: t(locale, 'faq.review.a1') },
+      { q: t(locale, 'faq.review.q2'), a: t(locale, 'faq.review.a2') },
+      { q: t(locale, 'faq.review.q3'), a: t(locale, 'faq.review.a3') },
+      { q: t(locale, 'faq.review.q4'), a: t(locale, 'faq.review.a4') },
+      { q: t(locale, 'faq.review.q5'), a: t(locale, 'faq.review.a5') },
+    ],
+  },
+} as const;
+
+const config = pageConfig[pageId as keyof typeof pageConfig];
+if (!config) {
+  return Astro.redirect(`/${locale}/`, 302);
+}
+
+const pageUrl = getPagePath(pageId, locale);
+
+// Expert data for review page - fetch from DB with fallback
+const expertFromDb = db.select().from(experts).where(eq(experts.lang, locale)).get();
+const expertData = expertFromDb || {
+  name: 'Expert',
+  avatarPath: '/images/experts/default.jpg',
+  title: 'iGaming Analyst',
+  bio: 'Our expert has extensive experience in the online gambling industry, specializing in crash games, slots analysis, and casino reviews.',
+  credentials: '["Industry Expert","Casino Reviewer","Game Analyst"]',
+};
+
+const buildDate = new Date().toISOString().split('T')[0];
+const buildDateFormatted = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+const authorName = pageId === 'review' ? expertData.name : 'BigBassCrashGame Editorial';
+
+// Build schemas based on page type
+const schemas: object[] = [websiteSchema()];
+
+if (pageId === 'review') {
+  schemas.push(
+    reviewSchema({
+      gameName: 'Big Bass Crash',
+      ratingValue: 8.7,
+      authorName: expertData.name,
+      authorTitle: 'Senior iGaming Analyst',
+      url: pageUrl,
+      datePublished: '2025-01-20',
+    }),
+    softwareAppSchema()
+  );
+}
+
+schemas.push(
+  articleSchema({
+    title: config.title,
+    description: config.description,
+    url: pageUrl,
+    image: config.ogImage,
+    datePublished: '2025-01-15',
+    dateModified: buildDate,
+    locale,
+    authorName,
+  })
+);
+
+const faqSchemaData = faqSchema(config.faqs);
+if (faqSchemaData) schemas.push(faqSchemaData);
+
+// Breadcrumbs
+const breadcrumbs = [
+  { label: t(locale, 'nav.home'), url: getPagePath('home', locale) },
+  { label: pageId === 'play-free' ? t(locale, 'nav.playFree') : pageId === 'where-to-play' ? t(locale, 'nav.whereToPlay') : t(locale, 'nav.review') },
+];
+
+// Review scores
+const reviewScores = [
+  { label: t(locale, 'review.graphics'), score: 9.0, maxScore: 10 },
+  { label: t(locale, 'review.gameplay'), score: 8.5, maxScore: 10 },
+  { label: t(locale, 'review.rtp'), score: 8.0, maxScore: 10 },
+  { label: t(locale, 'review.volatility'), score: 9.0, maxScore: 10 },
+  { label: t(locale, 'review.features'), score: 8.5, maxScore: 10 },
+];
+const overallScore = 8.7;
+
+---
+
+<PageLayout
+  locale={locale}
+  pageId={pageId}
+  title={config.title}
+  description={config.description}
+  ogImage={config.ogImage}
+  canonicalPath={pageUrl}
+  schema={schemas}
+>
+  {/* ======================== PLAY FREE PAGE ======================== */}
+  {pageId === 'play-free' && (
+    <>
+      <!-- Hero -->
+      <section class="relative bg-gradient-to-b from-ocean-950 to-ocean-900">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
+          <Breadcrumbs items={breadcrumbs} locale={locale} />
+
+          <div class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold mb-4">
+              <span class="bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
+                {config.title}
+              </span>
+            </h1>
+            <p class="text-lg text-gray-300 max-w-2xl mx-auto">
+              {config.description}
+            </p>
+            <p class="text-sm text-gray-400 mt-3">
+              By {authorName} · Updated {buildDateFormatted}
+            </p>
+          </div>
+
+          <!-- Game Demo -->
+          <div class="max-w-4xl mx-auto">
+            <GameDemo
+              client:visible
+              lang={locale}
+              loadingText={t(locale, 'demo.loading')}
+              fullscreenText={t(locale, 'demo.fullscreen')}
+            />
+          </div>
+
+          <!-- Play for real money CTA -->
+          <div class="text-center mt-8">
+            <Button
+              href={`/go/1xbet?from=play-free&lang=${locale}`}
+              variant="primary"
+              size="xl"
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+            >
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.94s4.18 1.36 4.18 3.85c0 1.89-1.44 2.98-3.12 3.19z" />
+              </svg>
+              {t(locale, 'demo.playReal')}
+            </Button>
+          </div>
+        </div>
+        <WaveDecoration position="bottom" color="text-ocean-900" />
+      </section>
+
+      <!-- Compact Casino List -->
+      <section class="bg-ocean-900">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <CasinoTopList
+            casinos={casinoResults}
+            locale={locale}
+            pageSlug="play-free"
+            variant="compact"
+            maxItems={3}
+          />
+        </div>
+      </section>
+
+      <!-- How to Play Section -->
+      <section class="bg-ocean-800">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <h2 class="text-2xl sm:text-3xl font-bold text-white mb-8">
+            <span class="bg-gradient-to-r from-accent-400 to-water-300 bg-clip-text text-transparent">
+              {t(locale, 'demo.howToPlay')}
+            </span>
+          </h2>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <!-- Step 1 -->
+            <div class="relative bg-ocean-900/50 border border-ocean-600/20 rounded-2xl p-6 text-center">
+              <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-accent-500/10 border border-accent-500/20 flex items-center justify-center">
+                <span class="text-xl font-bold text-accent-400">1</span>
+              </div>
+              <h3 class="text-lg font-bold text-white mb-2">{t(locale, 'steps.placeBet.title')}</h3>
+              <p class="text-sm text-gray-400">{t(locale, 'steps.placeBet.desc')}</p>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="relative bg-ocean-900/50 border border-ocean-600/20 rounded-2xl p-6 text-center">
+              <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-accent-500/10 border border-accent-500/20 flex items-center justify-center">
+                <span class="text-xl font-bold text-accent-400">2</span>
+              </div>
+              <h3 class="text-lg font-bold text-white mb-2">{t(locale, 'steps.watchMultiplier.title')}</h3>
+              <p class="text-sm text-gray-400">{t(locale, 'steps.watchMultiplier.desc')}</p>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="relative bg-ocean-900/50 border border-ocean-600/20 rounded-2xl p-6 text-center">
+              <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-accent-500/10 border border-accent-500/20 flex items-center justify-center">
+                <span class="text-xl font-bold text-accent-400">3</span>
+              </div>
+              <h3 class="text-lg font-bold text-white mb-2">{t(locale, 'steps.cashOut.title')}</h3>
+              <p class="text-sm text-gray-400">{t(locale, 'steps.cashOut.desc')}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Play Free Article Section -->
+      <section class="bg-ocean-800">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <article class="prose prose-invert prose-lg max-w-none prose-headings:text-white prose-headings:font-bold prose-p:text-gray-300 prose-a:text-accent-400 prose-a:no-underline hover:prose-a:underline prose-strong:text-white">
+            <h2>{t(locale, 'article.playFree.guide.title')}</h2>
+            <p set:html={t(locale, 'article.playFree.guide.p1')} />
+            <p set:html={t(locale, 'article.playFree.guide.p2')} />
+
+            <ArticleImage src="/images/game/beautiful-gameplay-2.jpg" alt={t(locale, 'alt.playFree.demo')} width={800} height={450} />
+
+            <h2>{t(locale, 'article.playFree.features.title')}</h2>
+            <p set:html={t(locale, 'article.playFree.features.p1')} />
+            <ul>
+              <li set:html={t(locale, 'article.playFree.features.fullGame')} />
+              <li set:html={t(locale, 'article.playFree.features.noRisk')} />
+              <li set:html={t(locale, 'article.playFree.features.allDevices')} />
+              <li set:html={t(locale, 'article.playFree.features.noRegistration')} />
+              <li set:html={t(locale, 'article.playFree.features.practiceMode')} />
+            </ul>
+
+            <h2>{t(locale, 'article.playFree.strategy.title')}</h2>
+            <p set:html={t(locale, 'article.playFree.strategy.p1')} />
+            <p set:html={t(locale, 'article.playFree.strategy.p2')} />
+
+            <ArticleImage src="/images/game/theme-2.jpg" alt={t(locale, 'alt.playFree.strategy')} width={800} height={450} />
+
+            <h2>{t(locale, 'article.playFree.vsReal.title')}</h2>
+            <p set:html={t(locale, 'article.playFree.vsReal.p1')} />
+
+            <table>
+              <thead>
+                <tr>
+                  <th>{t(locale, 'table.demoVsReal.feature')}</th>
+                  <th>{t(locale, 'table.demoVsReal.demoMode')}</th>
+                  <th>{t(locale, 'table.demoVsReal.realMoney')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>{t(locale, 'table.demoVsReal.cost')}</td><td>{t(locale, 'table.demoVsReal.free')}</td><td>{t(locale, 'table.demoVsReal.realBets')}</td></tr>
+                <tr><td>{t(locale, 'table.demoVsReal.rtp')}</td><td>{t(locale, 'table.demoVsReal.identical')}</td><td>96.47%</td></tr>
+                <tr><td>{t(locale, 'table.demoVsReal.gameFeatures')}</td><td>{t(locale, 'table.demoVsReal.allIncluded')}</td><td>{t(locale, 'table.demoVsReal.allIncluded')}</td></tr>
+                <tr><td>{t(locale, 'table.demoVsReal.winnings')}</td><td>{t(locale, 'table.demoVsReal.virtual')}</td><td>{t(locale, 'table.demoVsReal.withdrawable')}</td></tr>
+                <tr><td>{t(locale, 'table.demoVsReal.registration')}</td><td>{t(locale, 'table.demoVsReal.notRequired')}</td><td>{t(locale, 'table.demoVsReal.required')}</td></tr>
+                <tr><td>{t(locale, 'table.demoVsReal.bonuses')}</td><td>{t(locale, 'table.demoVsReal.notAvailable')}</td><td>{t(locale, 'table.demoVsReal.available')}</td></tr>
+              </tbody>
+            </table>
+
+            <ArticleImage src="/images/game/gameplay-3.png" alt={t(locale, 'alt.playFree.comparison')} width={800} height={450} />
+
+            <p set:html={t(locale, 'article.playFree.vsReal.p2')} />
+
+            <h2>{t(locale, 'article.playFree.tips.title')}</h2>
+            <p set:html={t(locale, 'article.playFree.tips.p1')} />
+            <p set:html={t(locale, 'article.playFree.tips.p2')} />
+          </article>
+        </div>
+      </section>
+
+      <!-- FAQ & Comments -->
+      <section class="bg-ocean-900">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <FaqSection faqs={config.faqs} locale={locale} />
+
+          <div class="mt-12">
+            <CommentSection
+              client:visible
+              pageSlug="play-free"
+              lang={locale}
+              title={t(locale, 'comments.title')}
+              loadMoreText={t(locale, 'comments.loadMore')}
+              noCommentsText={t(locale, 'comments.noComments')}
+            />
+          </div>
+        </div>
+      </section>
+    </>
+  )}
+
+  {/* ======================== WHERE TO PLAY PAGE ======================== */}
+  {pageId === 'where-to-play' && (
+    <>
+      <!-- Hero -->
+      <section class="relative bg-gradient-to-b from-ocean-950 to-ocean-900">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
+          <Breadcrumbs items={breadcrumbs} locale={locale} />
+
+          <div class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold mb-4">
+              <span class="bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
+                {config.title}
+              </span>
+            </h1>
+            <p class="text-lg text-gray-300 max-w-2xl mx-auto">
+              {config.description}
+            </p>
+            <p class="text-sm text-gray-400 mt-3">
+              By {authorName} · Updated {buildDateFormatted}
+            </p>
+          </div>
+        </div>
+        <WaveDecoration position="bottom" color="text-ocean-900" />
+      </section>
+
+      <!-- Full Casino List -->
+      <section class="bg-ocean-900">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <h2 class="text-2xl font-bold text-white mb-6">
+            <span class="bg-gradient-to-r from-accent-400 to-water-300 bg-clip-text text-transparent">
+              {t(locale, 'casino.topCasinos')}
+            </span>
+          </h2>
+          <CasinoTopList
+            casinos={casinoResults}
+            locale={locale}
+            pageSlug="where-to-play"
+            variant="full"
+          />
+        </div>
+      </section>
+
+      <!-- Where to Play Article Section -->
+      <section class="bg-ocean-800">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <article class="prose prose-invert prose-lg max-w-none prose-headings:text-white prose-headings:font-bold prose-p:text-gray-300 prose-a:text-accent-400 prose-a:no-underline hover:prose-a:underline prose-strong:text-white">
+            <h2>{t(locale, 'article.whereToPlay.intro.title')}</h2>
+            <p set:html={t(locale, 'article.whereToPlay.intro.p1')} />
+            <p set:html={t(locale, 'article.whereToPlay.intro.p2')} />
+
+            <ArticleImage src="/images/game/beautiful-gameplay-3.jpg" alt={t(locale, 'alt.whereToPlay.casinos')} width={800} height={450} />
+
+            <h2>{t(locale, 'article.whereToPlay.bonuses.title')}</h2>
+            <p set:html={t(locale, 'article.whereToPlay.bonuses.p1')} />
+            <p set:html={t(locale, 'article.whereToPlay.bonuses.p2')} />
+
+            <h2>{t(locale, 'article.whereToPlay.safety.title')}</h2>
+            <p set:html={t(locale, 'article.whereToPlay.safety.p1')} />
+            <p set:html={t(locale, 'article.whereToPlay.safety.p2')} />
+
+            <h2>{t(locale, 'article.whereToPlay.payments.title')}</h2>
+            <p set:html={t(locale, 'article.whereToPlay.payments.p1')} />
+            <p set:html={t(locale, 'article.whereToPlay.payments.p2')} />
+
+            <table>
+              <thead>
+                <tr>
+                  <th>{t(locale, 'table.payments.method')}</th>
+                  <th>{t(locale, 'table.payments.minDeposit')}</th>
+                  <th>{t(locale, 'table.payments.speed')}</th>
+                  <th>{t(locale, 'table.payments.fees')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>Visa / Mastercard</td><td>$10</td><td>{t(locale, 'table.payments.instant')}</td><td>{t(locale, 'table.payments.free')}</td></tr>
+                <tr><td>Skrill / Neteller</td><td>$5</td><td>{t(locale, 'table.payments.instant')}</td><td>{t(locale, 'table.payments.free')}</td></tr>
+                <tr><td>Bank Transfer</td><td>$20</td><td>{t(locale, 'table.payments.bankDays')}</td><td>{t(locale, 'table.payments.mayApply')}</td></tr>
+                <tr><td>Bitcoin / Ethereum</td><td>$10</td><td>{t(locale, 'table.payments.cryptoTime')}</td><td>{t(locale, 'table.payments.free')}</td></tr>
+              </tbody>
+            </table>
+
+            <ArticleImage src="/images/game/theme-3.jpg" alt={t(locale, 'alt.whereToPlay.payments')} width={800} height={450} />
+
+            <h2>{t(locale, 'article.whereToPlay.mobile.title')}</h2>
+            <p set:html={t(locale, 'article.whereToPlay.mobile.p1')} />
+            <p set:html={t(locale, 'article.whereToPlay.mobile.p2')} />
+
+            <h2>{t(locale, 'article.whereToPlay.countries.title')}</h2>
+            <p set:html={t(locale, 'article.whereToPlay.countries.p1')} />
+            <p set:html={t(locale, 'article.whereToPlay.countries.p2')} />
+
+            <ArticleImage src="/images/game/theme-4.jpg" alt={t(locale, 'alt.whereToPlay.mobile')} width={800} height={450} />
+          </article>
+        </div>
+      </section>
+
+      <!-- FAQ & Comments -->
+      <section class="bg-ocean-900">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <FaqSection faqs={config.faqs} locale={locale} />
+
+          <div class="mt-12">
+            <CommentSection
+              client:visible
+              pageSlug="where-to-play"
+              lang={locale}
+              title={t(locale, 'comments.title')}
+              loadMoreText={t(locale, 'comments.loadMore')}
+              noCommentsText={t(locale, 'comments.noComments')}
+            />
+          </div>
+        </div>
+      </section>
+    </>
+  )}
+
+  {/* ======================== REVIEW PAGE ======================== */}
+  {pageId === 'review' && (
+    <>
+      <!-- Hero -->
+      <section class="relative bg-gradient-to-b from-ocean-950 to-ocean-900">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
+          <Breadcrumbs items={breadcrumbs} locale={locale} />
+
+          <div class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold mb-4">
+              <span class="bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
+                {config.title}
+              </span>
+            </h1>
+            <p class="text-lg text-gray-300 max-w-2xl mx-auto">
+              {config.description}
+            </p>
+          </div>
+        </div>
+        <WaveDecoration position="bottom" color="text-ocean-900" />
+      </section>
+
+      <section class="bg-ocean-900">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <p class="text-sm text-gray-400 mb-6">
+            By {authorName} · Updated {buildDateFormatted}
+          </p>
+
+          <!-- Expert Profile -->
+          <ExpertProfile
+            expert={expertData}
+            locale={locale}
+            updatedDate={buildDateFormatted}
+          />
+
+          <!-- Review Score Widget -->
+          <div class="bg-glass backdrop-blur-sm border border-ocean-600/30 rounded-2xl p-6 mb-10">
+            <h2 class="text-xl font-bold text-white mb-6">
+              {t(locale, 'review.overallScore')}
+            </h2>
+
+            <div class="flex flex-col sm:flex-row items-center gap-8">
+              <!-- Overall Score Circle -->
+              <div class="flex-shrink-0 text-center">
+                <div class="relative w-32 h-32">
+                  <svg class="w-32 h-32 transform -rotate-90" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="54" stroke="currentColor" stroke-width="8" fill="none" class="text-ocean-700" />
+                    <circle cx="60" cy="60" r="54" stroke="currentColor" stroke-width="8" fill="none"
+                      class="text-accent-400"
+                      stroke-dasharray={`${(overallScore / 10) * 339.292} 339.292`}
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                  <div class="absolute inset-0 flex items-center justify-center">
+                    <div>
+                      <span class="text-3xl font-extrabold text-white">{overallScore}</span>
+                      <span class="text-sm text-gray-400">/10</span>
+                    </div>
+                  </div>
+                </div>
+                <p class="text-sm text-gray-400 mt-2">{t(locale, 'review.overallRating')}</p>
+              </div>
+
+              <!-- Score Breakdown -->
+              <div class="flex-1 w-full space-y-3">
+                {reviewScores.map((item) => (
+                  <div class="flex items-center gap-3">
+                    <span class="text-sm text-gray-300 w-24 flex-shrink-0">{item.label}</span>
+                    <div class="flex-1 h-2.5 bg-ocean-700 rounded-full overflow-hidden">
+                      <div
+                        class="h-full rounded-full bg-gradient-to-r from-accent-500 to-accent-400"
+                        style={`width: ${(item.score / item.maxScore) * 100}%`}
+                      />
+                    </div>
+                    <span class="text-sm font-semibold text-white w-10 text-right">{item.score}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <!-- Review Article Content -->
+          <article class="prose prose-invert prose-lg max-w-none prose-headings:text-white prose-headings:font-bold prose-p:text-gray-300 prose-a:text-accent-400 prose-a:no-underline hover:prose-a:underline prose-strong:text-white mb-12">
+            <h2>{t(locale, 'review.title')}</h2>
+            <p set:html={t(locale, 'article.review.intro')} />
+
+            <h3>{t(locale, 'article.review.graphics.title')}</h3>
+            <p set:html={t(locale, 'article.review.graphics.text')} />
+            <p set:html={t(locale, 'article.review.graphics.text2')} />
+
+            <ArticleImage src="/images/game/beautiful-gameplay-3.jpg" alt={t(locale, 'alt.review.graphics')} width={800} height={450} />
+
+            <h3>{t(locale, 'article.review.gameplay.title')}</h3>
+            <p set:html={t(locale, 'article.review.gameplay.text')} />
+            <p set:html={t(locale, 'article.review.gameplay.text2')} />
+
+            <ArticleImage src="/images/game/theme-5.jpg" alt={t(locale, 'alt.review.gameplay')} width={800} height={450} />
+
+            <h3>{t(locale, 'article.review.rtp.title')}</h3>
+            <p set:html={t(locale, 'article.review.rtp.text')} />
+
+            <h3>{t(locale, 'article.review.volatility.title')}</h3>
+            <p set:html={t(locale, 'article.review.volatility.text')} />
+
+            <h3>{t(locale, 'article.review.features.title')}</h3>
+            <p set:html={t(locale, 'article.review.features.text')} />
+
+            <ArticleImage src="/images/game/theme-6.jpg" alt={t(locale, 'alt.review.features')} width={800} height={450} />
+
+            <h3>{t(locale, 'article.review.strategy.title')}</h3>
+            <p set:html={t(locale, 'article.review.strategy.text')} />
+
+            <h3>{t(locale, 'article.review.comparison.title')}</h3>
+            <p set:html={t(locale, 'article.review.comparison.text')} />
+
+            <table>
+              <thead>
+                <tr>
+                  <th>{t(locale, 'table.comparison.feature')}</th>
+                  <th>Big Bass Crash</th>
+                  <th>Aviator</th>
+                  <th>JetX</th>
+                  <th>Spaceman</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>{t(locale, 'table.comparison.provider')}</td><td>Pragmatic Play</td><td>Spribe</td><td>SmartSoft</td><td>Pragmatic Play</td></tr>
+                <tr><td>{t(locale, 'table.comparison.rtp')}</td><td>96.47%</td><td>97.00%</td><td>96.56%</td><td>96.50%</td></tr>
+                <tr><td>{t(locale, 'table.comparison.maxWin')}</td><td>1,000x</td><td>100x</td><td>25,000x</td><td>5,000x</td></tr>
+                <tr><td>{t(locale, 'table.comparison.theme')}</td><td>{t(locale, 'table.comparison.fishing')}</td><td>{t(locale, 'table.comparison.aviation')}</td><td>{t(locale, 'table.comparison.space')}</td><td>{t(locale, 'table.comparison.space')}</td></tr>
+                <tr><td>{t(locale, 'table.comparison.dualBet')}</td><td>{t(locale, 'table.comparison.yes')}</td><td>{t(locale, 'table.comparison.yes')}</td><td>{t(locale, 'table.comparison.no')}</td><td>{t(locale, 'table.comparison.no')}</td></tr>
+                <tr><td>{t(locale, 'table.comparison.autoCashout')}</td><td>{t(locale, 'table.comparison.yes')}</td><td>{t(locale, 'table.comparison.yes')}</td><td>{t(locale, 'table.comparison.yes')}</td><td>{t(locale, 'table.comparison.yes')}</td></tr>
+              </tbody>
+            </table>
+
+            <ArticleImage src="/images/game/gameplay-4.png" alt={t(locale, 'alt.review.comparison')} width={800} height={450} />
+
+            <h2>{t(locale, 'review.verdict')}</h2>
+            <p set:html={t(locale, 'article.review.verdict.text')} />
+            <p set:html={t(locale, 'article.review.verdict.p2')} />
+          </article>
+
+          <!-- Casino Recommendations -->
+          <div class="mb-12">
+            <h2 class="text-2xl font-bold text-white mb-6">
+              <span class="bg-gradient-to-r from-accent-400 to-water-300 bg-clip-text text-transparent">
+                {t(locale, 'casino.recommended')}
+              </span>
+            </h2>
+            <CasinoTopList
+              casinos={casinoResults}
+              locale={locale}
+              pageSlug="review"
+              variant="compact"
+              maxItems={3}
+            />
+          </div>
+
+          <!-- FAQ -->
+          <FaqSection faqs={config.faqs} locale={locale} />
+
+          <!-- Comments -->
+          <div class="mt-12">
+            <CommentSection
+              client:visible
+              pageSlug="review"
+              lang={locale}
+              title={t(locale, 'comments.title')}
+              loadMoreText={t(locale, 'comments.loadMore')}
+              noCommentsText={t(locale, 'comments.noComments')}
+            />
+          </div>
+        </div>
+      </section>
+    </>
+  )}
+</PageLayout>

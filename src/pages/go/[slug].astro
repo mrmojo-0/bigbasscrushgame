@@ -1,0 +1,228 @@
+---
+export const prerender = false;
+
+import { db } from '../../lib/db';
+import { casinos } from '../../lib/db/schema';
+import { eq } from 'drizzle-orm';
+
+const { slug } = Astro.params;
+const from = Astro.url.searchParams.get('from') || 'direct';
+const lang = Astro.url.searchParams.get('lang') || 'en';
+
+// Look up casino in DB to get brandId and affiliateUrl
+const casino = slug ? db.select().from(casinos).where(eq(casinos.slug, slug)).get() : null;
+const brandId = casino?.brandId || slug || 'unknown';
+
+// keyword format: {page}_{lang} — allows filtering by page and language in analytics
+// creative: brand identifier for splitting traffic by casino
+const keyword = `${from}_${lang}`;
+const trackingUrl = `https://pixlclick.click/click?key=929139560bb74e2d82b65e0f942edc99&creative=${brandId}&keyword=${keyword}`;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta http-equiv="refresh" content={`3;url=${trackingUrl}`} />
+    <title>Redirecting...</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #0a1628 0%, #0d2137 50%, #0f2b46 100%);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        color: #e2e8f0;
+        overflow: hidden;
+      }
+
+      .container {
+        text-align: center;
+        padding: 2rem;
+        max-width: 480px;
+        width: 100%;
+      }
+
+      /* Underwater bubbles animation */
+      .bubbles {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+        z-index: 0;
+      }
+      .bubble {
+        position: absolute;
+        bottom: -20px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: rgba(34, 197, 94, 0.08);
+        animation: rise linear infinite;
+      }
+      .bubble:nth-child(1) { left: 10%; width: 8px; height: 8px; animation-duration: 8s; animation-delay: 0s; }
+      .bubble:nth-child(2) { left: 25%; width: 12px; height: 12px; animation-duration: 10s; animation-delay: 1s; }
+      .bubble:nth-child(3) { left: 45%; width: 6px; height: 6px; animation-duration: 7s; animation-delay: 2s; }
+      .bubble:nth-child(4) { left: 65%; width: 14px; height: 14px; animation-duration: 12s; animation-delay: 0.5s; }
+      .bubble:nth-child(5) { left: 80%; width: 10px; height: 10px; animation-duration: 9s; animation-delay: 3s; }
+      .bubble:nth-child(6) { left: 35%; width: 8px; height: 8px; animation-duration: 11s; animation-delay: 1.5s; }
+
+      @keyframes rise {
+        0% { transform: translateY(0) scale(1); opacity: 0.6; }
+        50% { opacity: 0.3; }
+        100% { transform: translateY(-100vh) scale(0.5); opacity: 0; }
+      }
+
+      .content {
+        position: relative;
+        z-index: 1;
+      }
+
+      /* Spinner */
+      .spinner {
+        width: 56px;
+        height: 56px;
+        border: 4px solid rgba(34, 197, 94, 0.15);
+        border-top-color: #22c55e;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin: 0 auto 1.5rem;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      .icon {
+        width: 48px;
+        height: 48px;
+        margin: 0 auto 1rem;
+        color: #22c55e;
+      }
+
+      h1 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: #f1f5f9;
+      }
+
+      .subtitle {
+        font-size: 0.875rem;
+        color: #94a3b8;
+        margin-bottom: 2rem;
+        line-height: 1.5;
+      }
+
+      .casino-name {
+        color: #22c55e;
+        font-weight: 600;
+        text-transform: capitalize;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 3px;
+        background: rgba(34, 197, 94, 0.1);
+        border-radius: 3px;
+        overflow: hidden;
+        margin-bottom: 2rem;
+      }
+
+      .progress-fill {
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(90deg, #22c55e, #4ade80);
+        border-radius: 3px;
+        animation: progress 3s linear forwards;
+      }
+      @keyframes progress {
+        0% { width: 0%; }
+        100% { width: 100%; }
+      }
+
+      .fallback-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #22c55e;
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-weight: 500;
+        padding: 0.5rem 1rem;
+        border: 1px solid rgba(34, 197, 94, 0.2);
+        border-radius: 0.75rem;
+        transition: all 0.2s;
+      }
+      .fallback-link:hover {
+        background: rgba(34, 197, 94, 0.1);
+        border-color: rgba(34, 197, 94, 0.4);
+      }
+
+      .disclaimer {
+        font-size: 0.75rem;
+        color: #64748b;
+        margin-top: 2rem;
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Underwater bubble decoration -->
+    <div class="bubbles">
+      <div class="bubble"></div>
+      <div class="bubble"></div>
+      <div class="bubble"></div>
+      <div class="bubble"></div>
+      <div class="bubble"></div>
+      <div class="bubble"></div>
+    </div>
+
+    <div class="container">
+      <div class="content">
+        <!-- Fish icon -->
+        <svg class="icon" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 20c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-18C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+        </svg>
+
+        <!-- Spinner -->
+        <div class="spinner"></div>
+
+        <h1>Redirecting to <span class="casino-name">{slug}</span></h1>
+        <p class="subtitle">
+          You are being redirected to your selected casino. Please wait a moment...
+        </p>
+
+        <!-- Progress bar -->
+        <div class="progress-bar">
+          <div class="progress-fill"></div>
+        </div>
+
+        <!-- Fallback link -->
+        <a href={trackingUrl} class="fallback-link" rel="noopener noreferrer nofollow">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+          Click here if not redirected automatically
+        </a>
+
+        <p class="disclaimer">
+          18+ | Please gamble responsibly. Clicking this link will take you to an external casino website.
+        </p>
+      </div>
+    </div>
+
+    <!-- JavaScript backup redirect -->
+    <script define:vars={{ trackingUrl }}>
+      setTimeout(function() {
+        window.location.href = trackingUrl;
+      }, 3000);
+    </script>
+  </body>
+</html>

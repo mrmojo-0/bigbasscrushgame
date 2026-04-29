@@ -1,0 +1,24 @@
+---
+interface Props {
+  position?: 'top' | 'bottom';
+  color?: string;
+  className?: string;
+}
+
+const { position = 'bottom', color = 'text-ocean-900', className = '' } = Astro.props;
+---
+
+{position === 'bottom' ? (
+  <div class:list={['relative w-full overflow-hidden', className]}>
+    <svg class:list={['w-full h-16 sm:h-24', color]} viewBox="0 0 1440 96" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+      <path d="M0 96h1440V32c-120 16-240 32-360 32s-240-16-360-32-240-32-360-32-240 16-360 32V96z" fill="currentColor" />
+      <path d="M0 96h1440V48c-180 12-360 24-540 24s-360-12-540-24-360-24-360-24v72z" fill="currentColor" opacity="0.5" />
+    </svg>
+  </div>
+) : (
+  <div class:list={['relative w-full overflow-hidden rotate-180', className]}>
+    <svg class:list={['w-full h-16 sm:h-24', color]} viewBox="0 0 1440 96" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+      <path d="M0 96h1440V32c-120 16-240 32-360 32s-240-16-360-32-240-32-360-32-240 16-360 32V96z" fill="currentColor" />
+    </svg>
+  </div>
+)}

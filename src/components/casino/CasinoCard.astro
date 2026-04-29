@@ -1,0 +1,214 @@
+---
+import Rating from '@components/ui/Rating.astro';
+import Badge from '@components/ui/Badge.astro';
+import Button from '@components/ui/Button.astro';
+import type { Locale } from '@i18n/config';
+import { t, getLocalizedValue, getLocalizedArray } from '@i18n/utils';
+
+interface Casino {
+  id: number;
+  name: string;
+  slug: string;
+  brandId: string;
+  logoPath: string | null;
+  rating: number | null;
+  bonusAmount: string | null;
+  welcomeBonus: string | null;
+  freeSpins: string | null;
+  minDeposit: string | null;
+  license: string | null;
+  paymentMethods: string | null;
+  pros: string | null;
+  cons: string | null;
+  badges: string | null;
+  description: string | null;
+}
+
+interface Props {
+  casino: Casino;
+  locale: Locale;
+  rank: number;
+  pageSlug: string;
+  variant?: 'compact' | 'full';
+}
+
+const { casino, locale, rank, pageSlug, variant = 'full' } = Astro.props;
+
+const bonusText = getLocalizedValue(casino.welcomeBonus, locale) || casino.bonusAmount || '';
+const pros = getLocalizedArray(casino.pros, locale);
+const cons = getLocalizedArray(casino.cons, locale);
+const payments: string[] = casino.paymentMethods ? JSON.parse(casino.paymentMethods) : [];
+const badges: string[] = casino.badges ? JSON.parse(casino.badges) : [];
+
+const redirectUrl = `/go/${casino.slug}?from=${pageSlug}&lang=${locale}`;
+
+const rankColors = {
+  1: 'from-gold-400 to-amber-500 text-ocean-900',
+  2: 'from-gray-300 to-gray-400 text-ocean-900',
+  3: 'from-amber-600 to-amber-700 text-white',
+} as Record<number, string>;
+---
+
+<div class="relative group">
+  <div class="absolute -inset-0.5 bg-gradient-to-r from-accent-500/20 to-water-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+  <div class="relative bg-glass backdrop-blur-sm border border-ocean-600/30 rounded-2xl overflow-hidden hover:border-accent-500/30 transition-colors">
+
+    {/* === DESKTOP: Horizontal layout === */}
+    <div class="hidden md:flex items-stretch">
+
+      {/* Left: Rank + Logo + Name */}
+      <div class="flex items-center gap-4 p-5 min-w-[220px] border-r border-ocean-600/20">
+        {/* Rank */}
+        <div class:list={[
+          'flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm font-extrabold bg-gradient-to-b shadow-lg',
+          rankColors[rank] || 'from-ocean-500 to-ocean-600 text-white',
+        ]}>
+          #{rank}
+        </div>
+
+        {/* Logo + Name */}
+        <div class="flex flex-col items-center gap-2 flex-1 min-w-0">
+          <div class="w-16 h-16 rounded-xl bg-ocean-700 border border-ocean-600/50 flex items-center justify-center overflow-hidden flex-shrink-0">
+            {casino.logoPath ? (
+              <img src={casino.logoPath} alt={casino.name} class="w-full h-full object-contain p-1.5" loading="lazy" width="64" height="64" />
+            ) : (
+              <span class="text-2xl font-bold text-accent-400">{casino.name.charAt(0)}</span>
+            )}
+          </div>
+          <div class="text-center min-w-0">
+            <h3 class="text-base font-bold text-white truncate">{casino.name}</h3>
+            <Rating value={casino.rating || 4.5} size="sm" />
+          </div>
+        </div>
+      </div>
+
+      {/* Center: Bonus info */}
+      <div class="flex-1 p-5 flex flex-col justify-center">
+        {/* Badges */}
+        {badges.length > 0 && (
+          <div class="flex flex-wrap gap-1.5 mb-3">
+            {badges.map(badge => (
+              <Badge type={badge} locale={locale} />
+            ))}
+          </div>
+        )}
+
+        {bonusText && (
+          <p class="text-base font-bold text-accent-400 mb-2">{bonusText}</p>
+        )}
+
+        <div class="flex flex-wrap gap-x-5 gap-y-1 text-sm text-gray-300">
+          {casino.freeSpins && (
+            <span>🎰 {t(locale, 'casino.freeSpins')}: <strong class="text-white">{casino.freeSpins}</strong></span>
+          )}
+          {casino.minDeposit && (
+            <span>💰 {t(locale, 'casino.minDeposit')}: <strong class="text-white">{casino.minDeposit}</strong></span>
+          )}
+          {casino.license && (
+            <span>🛡️ {t(locale, 'casino.license')}: <strong class="text-white">{casino.license}</strong></span>
+          )}
+        </div>
+
+        {/* Payment methods - desktop full only */}
+        {variant === 'full' && payments.length > 0 && (
+          <div class="flex flex-wrap gap-1.5 mt-3">
+            {payments.slice(0, 6).map(method => (
+              <span class="px-2 py-0.5 rounded bg-ocean-700/60 text-xs text-gray-400 border border-ocean-600/20">
+                {method}
+              </span>
+            ))}
+            {payments.length > 6 && (
+              <span class="px-2 py-0.5 rounded bg-ocean-700/60 text-xs text-gray-500">+{payments.length - 6}</span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Right: CTA */}
+      <div class="flex flex-col items-center justify-center gap-2 p-5 min-w-[180px] border-l border-ocean-600/20">
+        <Button
+          href={redirectUrl}
+          variant="primary"
+          size="lg"
+          fullWidth
+          target="_blank"
+          rel="nofollow noopener noreferrer"
+        >
+          {t(locale, 'casino.playNow')}
+        </Button>
+        {variant === 'full' && pros.length > 0 && (
+          <ul class="mt-1 space-y-0.5">
+            {pros.slice(0, 2).map(pro => (
+              <li class="flex items-start gap-1 text-xs text-gray-400">
+                <span class="text-accent-400 flex-shrink-0">✓</span>
+                <span class="line-clamp-1">{pro}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+
+    {/* === MOBILE: Vertical layout === */}
+    <div class="md:hidden p-4">
+      {/* Top: Rank + Logo + Name + Badges */}
+      <div class="flex items-start gap-3 mb-3">
+        <div class:list={[
+          'flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-xs font-extrabold bg-gradient-to-b shadow-lg',
+          rankColors[rank] || 'from-ocean-500 to-ocean-600 text-white',
+        ]}>
+          #{rank}
+        </div>
+        <div class="w-14 h-14 rounded-xl bg-ocean-700 border border-ocean-600/50 flex items-center justify-center overflow-hidden flex-shrink-0">
+          {casino.logoPath ? (
+            <img src={casino.logoPath} alt={casino.name} class="w-full h-full object-contain p-1" loading="lazy" width="56" height="56" />
+          ) : (
+            <span class="text-xl font-bold text-accent-400">{casino.name.charAt(0)}</span>
+          )}
+        </div>
+        <div class="flex-1 min-w-0">
+          <h3 class="text-base font-bold text-white truncate">{casino.name}</h3>
+          <Rating value={casino.rating || 4.5} size="sm" />
+          {badges.length > 0 && (
+            <div class="flex flex-wrap gap-1 mt-1.5">
+              {badges.map(badge => (
+                <Badge type={badge} locale={locale} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Bonus */}
+      {bonusText && (
+        <p class="text-sm font-bold text-accent-400 mb-2">🎁 {bonusText}</p>
+      )}
+
+      <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-300 mb-3">
+        {casino.freeSpins && (
+          <span>🎰 {t(locale, 'casino.freeSpins')}: <strong class="text-white">{casino.freeSpins}</strong></span>
+        )}
+        {casino.minDeposit && (
+          <span>💰 {t(locale, 'casino.minDeposit')}: <strong class="text-white">{casino.minDeposit}</strong></span>
+        )}
+        {casino.license && (
+          <span>🛡️ <strong class="text-white">{casino.license}</strong></span>
+        )}
+      </div>
+
+      {/* CTA */}
+      <Button
+        href={redirectUrl}
+        variant="primary"
+        size="md"
+        fullWidth
+        target="_blank"
+        rel="nofollow noopener noreferrer"
+      >
+        🎣 {t(locale, 'casino.playNow')}
+      </Button>
+    </div>
+
+  </div>
+</div>
