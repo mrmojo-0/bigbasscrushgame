@@ -25,3 +25,7 @@ pnpm-debug.log*
 
 # large archives
 Archive.zip
+
+# local D1 database and wrangler state
+data/
+.wrangler/

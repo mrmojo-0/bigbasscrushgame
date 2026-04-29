@@ -1,14 +1,14 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
-import node from '@astrojs/node';
+import cloudflare from '@astrojs/cloudflare';
 import preact from '@astrojs/preact';
 import tailwind from '@astrojs/tailwind';
 import sitemap from '@astrojs/sitemap';
 
 export default defineConfig({
   site: 'https://bigbasscrashgame.com',
-  output: 'static',
-  adapter: node({ mode: 'standalone' }),
+  output: 'server',
+  adapter: cloudflare({ mode: 'directory' }),
   trailingSlash: 'ignore',
   integrations: [
     preact({ compat: true }),
@@ -40,15 +40,6 @@ export default defineConfig({
     ],
     routing: {
       prefixDefaultLocale: true,
-    },
-  },
-  server: {
-    host: '0.0.0.0',
-    port: 4321,
-  },
-  vite: {
-    optimizeDeps: {
-      exclude: ['better-sqlite3'],
     },
   },
 });

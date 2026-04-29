@@ -1,32 +1,23 @@
 import type { APIRoute } from 'astro';
-import { db } from '../../../lib/db/index';
+import { getDb } from '../../../lib/db/index';
 import { casinos } from '../../../lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { validateSession, SESSION_COOKIE_NAME } from '../../../lib/auth/session';
 
 export const prerender = false;
 
-export const PUT: APIRoute = async ({ params, request, cookies }) => {
+export const PUT: APIRoute = async ({ params, request, cookies, locals }) => {
   try {
+    const db = getDb(locals.runtime.env.DB);
     const token = cookies.get(SESSION_COOKIE_NAME)?.value;
-    if (!validateSession(token)) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
+    if (!await validateSession(db, token)) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
 
     const id = Number(params.id);
-    if (isNaN(id)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid casino ID' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+    if (isNaN(id)) return new Response(JSON.stringify({ error: 'Invalid casino ID' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
 
-    const body = await request.json();
-
-    // Build update object with only provided fields
+    const body = await request.json() as Record<string, unknown>;
     const updateData: Record<string, unknown> = { updatedAt: new Date() };
 
     if (body.name !== undefined) updateData.name = body.name;
@@ -49,73 +40,33 @@ export const PUT: APIRoute = async ({ params, request, cookies }) => {
     if (body.sortOrder !== undefined) updateData.sortOrder = body.sortOrder;
     if (body.isActive !== undefined) updateData.isActive = body.isActive;
 
-    const updated = db
-      .update(casinos)
-      .set(updateData)
-      .where(eq(casinos.id, id))
-      .returning()
-      .get();
+    const updated = await db.update(casinos).set(updateData).where(eq(casinos.id, id)).returning().get();
+    if (!updated) return new Response(JSON.stringify({ error: 'Casino not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
 
-    if (!updated) {
-      return new Response(
-        JSON.stringify({ error: 'Casino not found' }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({ casino: updated }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ casino: updated }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
-    return new Response(
-      JSON.stringify({ error: message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };
 
-export const DELETE: APIRoute = async ({ params, cookies }) => {
+export const DELETE: APIRoute = async ({ params, cookies, locals }) => {
   try {
+    const db = getDb(locals.runtime.env.DB);
     const token = cookies.get(SESSION_COOKIE_NAME)?.value;
-    if (!validateSession(token)) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
+    if (!await validateSession(db, token)) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
 
     const id = Number(params.id);
-    if (isNaN(id)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid casino ID' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+    if (isNaN(id)) return new Response(JSON.stringify({ error: 'Invalid casino ID' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
 
-    const deleted = db
-      .delete(casinos)
-      .where(eq(casinos.id, id))
-      .returning()
-      .get();
+    const deleted = await db.delete(casinos).where(eq(casinos.id, id)).returning().get();
+    if (!deleted) return new Response(JSON.stringify({ error: 'Casino not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
 
-    if (!deleted) {
-      return new Response(
-        JSON.stringify({ error: 'Casino not found' }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
-
-    return new Response(
-      JSON.stringify({ success: true }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Internal server error';
-    return new Response(
-      JSON.stringify({ error: message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+    return new Response(JSON.stringify({ error: message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

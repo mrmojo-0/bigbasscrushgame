@@ -1,4 +1,6 @@
 ---
+export const prerender = false;
+
 import PageLayout from '../../layouts/PageLayout.astro';
 import CasinoTopList from '../../components/casino/CasinoTopList.astro';
 import FaqSection from '../../components/content/FaqSection.astro';
@@ -9,43 +11,29 @@ import WaveDecoration from '../../components/ui/WaveDecoration.astro';
 import Button from '../../components/ui/Button.astro';
 import Breadcrumbs from '../../components/seo/Breadcrumbs.astro';
 import ArticleImage from '../../components/ui/ArticleImage.astro';
-import { ALL_LOCALES, type Locale } from '../../i18n/config';
+import { type Locale, isValidLocale } from '../../i18n/config';
 import { t, getPagePath } from '../../i18n/utils';
-import { PAGE_SLUGS, type PageId } from '../../i18n/slugs';
+import { PAGE_SLUGS, getPageIdFromSlug, type PageId } from '../../i18n/slugs';
 import { websiteSchema, articleSchema, faqSchema, reviewSchema, softwareAppSchema } from '../../lib/seo/schema-generators';
 import { getCasinosForLocale } from '../../lib/db/queries';
-import { db } from '../../lib/db/index';
+import { getDb } from '../../lib/db/index';
 import { experts } from '../../lib/db/schema';
 import { eq } from 'drizzle-orm';
 
-export function getStaticPaths() {
-  const pages: PageId[] = ['play-free', 'where-to-play', 'review'];
-  const paths = [];
+const { lang, slug } = Astro.params;
+if (!lang || !isValidLocale(lang)) {
+  return Astro.redirect('/en/', 302);
+}
+const locale = lang as Locale;
 
-  for (const pageId of pages) {
-    for (const locale of ALL_LOCALES) {
-      const slug = PAGE_SLUGS[pageId][locale];
-      if (slug) {
-        paths.push({
-          params: { lang: locale, slug: slug },
-          props: { locale, pageId },
-        });
-      }
-    }
-  }
-
-  return paths;
+const pageId = slug ? getPageIdFromSlug(slug, locale) : null;
+if (!pageId || pageId === 'home') {
+  return Astro.redirect(`/${locale}/`, 302);
 }
 
-interface Props {
-  locale: Locale;
-  pageId: PageId;
-}
+const db = getDb(Astro.locals.runtime.env.DB);
 
-const { locale, pageId } = Astro.props;
-
-// Fetch casinos from DB ordered by locale-specific sort order
-const casinoResults = getCasinosForLocale(locale);
+const casinoResults = await getCasinosForLocale(db, locale);
 
 // Page-specific content configuration
 const pageConfig = {
@@ -95,7 +83,7 @@ if (!config) {
 const pageUrl = getPagePath(pageId, locale);
 
 // Expert data for review page - fetch from DB with fallback
-const expertFromDb = db.select().from(experts).where(eq(experts.lang, locale)).get();
+const expertFromDb = await db.select().from(experts).where(eq(experts.lang, locale)).get();
 const expertData = expertFromDb || {
   name: 'Expert',
   avatarPath: '/images/experts/default.jpg',

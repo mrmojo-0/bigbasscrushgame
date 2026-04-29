@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 
-import { db } from '../../lib/db';
+import { getDb } from '../../lib/db';
 import { casinos } from '../../lib/db/schema';
 import { eq } from 'drizzle-orm';
 
@@ -9,12 +9,10 @@ const { slug } = Astro.params;
 const from = Astro.url.searchParams.get('from') || 'direct';
 const lang = Astro.url.searchParams.get('lang') || 'en';
 
-// Look up casino in DB to get brandId and affiliateUrl
-const casino = slug ? db.select().from(casinos).where(eq(casinos.slug, slug)).get() : null;
+const db = getDb(Astro.locals.runtime.env.DB);
+const casino = slug ? await db.select().from(casinos).where(eq(casinos.slug, slug)).get() : null;
 const brandId = casino?.brandId || slug || 'unknown';
 
-// keyword format: {page}_{lang} — allows filtering by page and language in analytics
-// creative: brand identifier for splitting traffic by casino
 const keyword = `${from}_${lang}`;
 const trackingUrl = `https://pixlclick.click/click?key=929139560bb74e2d82b65e0f942edc99&creative=${brandId}&keyword=${keyword}`;
 ---
@@ -50,7 +48,6 @@ const trackingUrl = `https://pixlclick.click/click?key=929139560bb74e2d82b65e0f9
         width: 100%;
       }
 
-      /* Underwater bubbles animation */
       .bubbles {
         position: fixed;
         inset: 0;
@@ -80,12 +77,8 @@ const trackingUrl = `https://pixlclick.click/click?key=929139560bb74e2d82b65e0f9
         100% { transform: translateY(-100vh) scale(0.5); opacity: 0; }
       }
 
-      .content {
-        position: relative;
-        z-index: 1;
-      }
+      .content { position: relative; z-index: 1; }
 
-      /* Spinner */
       .spinner {
         width: 56px;
         height: 56px;
@@ -95,36 +88,12 @@ const trackingUrl = `https://pixlclick.click/click?key=929139560bb74e2d82b65e0f9
         animation: spin 0.8s linear infinite;
         margin: 0 auto 1.5rem;
       }
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
+      @keyframes spin { to { transform: rotate(360deg); } }
 
-      .icon {
-        width: 48px;
-        height: 48px;
-        margin: 0 auto 1rem;
-        color: #22c55e;
-      }
-
-      h1 {
-        font-size: 1.25rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-        color: #f1f5f9;
-      }
-
-      .subtitle {
-        font-size: 0.875rem;
-        color: #94a3b8;
-        margin-bottom: 2rem;
-        line-height: 1.5;
-      }
-
-      .casino-name {
-        color: #22c55e;
-        font-weight: 600;
-        text-transform: capitalize;
-      }
+      .icon { width: 48px; height: 48px; margin: 0 auto 1rem; color: #22c55e; }
+      h1 { font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; color: #f1f5f9; }
+      .subtitle { font-size: 0.875rem; color: #94a3b8; margin-bottom: 2rem; line-height: 1.5; }
+      .casino-name { color: #22c55e; font-weight: 600; text-transform: capitalize; }
 
       .progress-bar {
         width: 100%;
@@ -134,7 +103,6 @@ const trackingUrl = `https://pixlclick.click/click?key=929139560bb74e2d82b65e0f9
         overflow: hidden;
         margin-bottom: 2rem;
       }
-
       .progress-fill {
         width: 0%;
         height: 100%;
@@ -142,10 +110,7 @@ const trackingUrl = `https://pixlclick.click/click?key=929139560bb74e2d82b65e0f9
         border-radius: 3px;
         animation: progress 3s linear forwards;
       }
-      @keyframes progress {
-        0% { width: 0%; }
-        100% { width: 100%; }
-      }
+      @keyframes progress { 0% { width: 0%; } 100% { width: 100%; } }
 
       .fallback-link {
         display: inline-flex;
@@ -160,21 +125,11 @@ const trackingUrl = `https://pixlclick.click/click?key=929139560bb74e2d82b65e0f9
         border-radius: 0.75rem;
         transition: all 0.2s;
       }
-      .fallback-link:hover {
-        background: rgba(34, 197, 94, 0.1);
-        border-color: rgba(34, 197, 94, 0.4);
-      }
-
-      .disclaimer {
-        font-size: 0.75rem;
-        color: #64748b;
-        margin-top: 2rem;
-        line-height: 1.5;
-      }
+      .fallback-link:hover { background: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.4); }
+      .disclaimer { font-size: 0.75rem; color: #64748b; margin-top: 2rem; line-height: 1.5; }
     </style>
   </head>
   <body>
-    <!-- Underwater bubble decoration -->
     <div class="bubbles">
       <div class="bubble"></div>
       <div class="bubble"></div>
@@ -186,43 +141,25 @@ const trackingUrl = `https://pixlclick.click/click?key=929139560bb74e2d82b65e0f9
 
     <div class="container">
       <div class="content">
-        <!-- Fish icon -->
         <svg class="icon" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <path d="M12 20c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-18C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
         </svg>
-
-        <!-- Spinner -->
         <div class="spinner"></div>
-
         <h1>Redirecting to <span class="casino-name">{slug}</span></h1>
-        <p class="subtitle">
-          You are being redirected to your selected casino. Please wait a moment...
-        </p>
-
-        <!-- Progress bar -->
-        <div class="progress-bar">
-          <div class="progress-fill"></div>
-        </div>
-
-        <!-- Fallback link -->
+        <p class="subtitle">You are being redirected to your selected casino. Please wait a moment...</p>
+        <div class="progress-bar"><div class="progress-fill"></div></div>
         <a href={trackingUrl} class="fallback-link" rel="noopener noreferrer nofollow">
           <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
           </svg>
           Click here if not redirected automatically
         </a>
-
-        <p class="disclaimer">
-          18+ | Please gamble responsibly. Clicking this link will take you to an external casino website.
-        </p>
+        <p class="disclaimer">18+ | Please gamble responsibly. Clicking this link will take you to an external casino website.</p>
       </div>
     </div>
 
-    <!-- JavaScript backup redirect -->
     <script define:vars={{ trackingUrl }}>
-      setTimeout(function() {
-        window.location.href = trackingUrl;
-      }, 3000);
+      setTimeout(function() { window.location.href = trackingUrl; }, 3000);
     </script>
   </body>
 </html>

@@ -16,5 +16,13 @@
       "tag": "0001_nifty_nomad",
       "breakpoints": true
     }
+    ,
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1772100000000,
+      "tag": "0002_sessions",
+      "breakpoints": true
+    }
   ]
 }

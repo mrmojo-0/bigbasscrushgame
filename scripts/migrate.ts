@@ -1,11 +1,9 @@
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
-import { db } from '../src/lib/db';
+import { execSync } from 'child_process';
 
-console.log('Running database migrations...');
-
+console.log('Applying D1 migrations locally...');
 try {
-  migrate(db, { migrationsFolder: './drizzle/migrations' });
-  console.log('Migrations completed successfully.');
+  execSync('wrangler d1 migrations apply DB --local', { stdio: 'inherit' });
+  console.log('Migrations complete.');
 } catch (error) {
   console.error('Migration failed:', error);
   process.exit(1);

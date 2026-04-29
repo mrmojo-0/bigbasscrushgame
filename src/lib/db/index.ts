@@ -1,25 +1,8 @@
-import { resolve } from 'path';
-import { mkdirSync } from 'fs';
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { drizzle } from 'drizzle-orm/d1';
 import * as schema from './schema';
 
-// Resolve the database path from the project root
-const dbPath = resolve(process.cwd(), 'data', 'database.sqlite');
+export type DrizzleD1 = ReturnType<typeof getDb>;
 
-// Ensure the data directory exists
-mkdirSync(resolve(process.cwd(), 'data'), { recursive: true });
-
-// Create the SQLite connection
-const sqlite = new Database(dbPath);
-
-// Enable WAL mode for better concurrent read performance
-sqlite.pragma('journal_mode = WAL');
-
-// Enable foreign key constraint enforcement
-sqlite.pragma('foreign_keys = ON');
-
-// Create the Drizzle ORM instance with schema
-export const db = drizzle(sqlite, { schema });
-
-export default db;
+export function getDb(D1: D1Database) {
+  return drizzle(D1, { schema });
+}

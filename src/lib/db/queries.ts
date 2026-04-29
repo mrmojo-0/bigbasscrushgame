@@ -1,14 +1,9 @@
-import { db } from './index';
+import type { DrizzleD1 } from './index';
 import { casinos, casinoLocaleSettings } from './schema';
 import { eq, and, asc } from 'drizzle-orm';
 
-/**
- * Get casinos ordered by locale-specific sort order.
- * Falls back to global sort order if no locale settings exist.
- */
-export function getCasinosForLocale(locale: string) {
-  // Try locale-specific ordering first
-  const results = db
+export async function getCasinosForLocale(db: DrizzleD1, locale: string) {
+  const results = await db
     .select({
       id: casinos.id,
       name: casinos.name,
@@ -44,7 +39,6 @@ export function getCasinosForLocale(locale: string) {
     .orderBy(asc(casinoLocaleSettings.sortOrder))
     .all();
 
-  // Fallback to global sort order if no locale settings exist
   if (results.length === 0) {
     return db
       .select()

@@ -1,4 +1,4 @@
-import { db } from '../db/index';
+import type { DrizzleD1 } from '../db/index';
 import { settings } from '../db/schema';
 import { eq } from 'drizzle-orm';
 
@@ -13,9 +13,9 @@ interface CompletionOptions {
   model?: string;
 }
 
-async function getSettingValue(key: string): Promise<string | null> {
+async function getSettingValue(db: DrizzleD1, key: string): Promise<string | null> {
   try {
-    const result = db.select().from(settings).where(eq(settings.key, key)).get();
+    const result = await db.select().from(settings).where(eq(settings.key, key)).get();
     return result?.value || null;
   } catch {
     return null;
@@ -23,13 +23,12 @@ async function getSettingValue(key: string): Promise<string | null> {
 }
 
 export async function generateCompletion(
+  db: DrizzleD1,
   messages: ChatMessage[],
   options?: CompletionOptions,
 ): Promise<string> {
-  const apiKey = options?.model
-    ? await getSettingValue('openrouter_api_key')
-    : await getSettingValue('openrouter_api_key');
-  const model = options?.model || (await getSettingValue('openrouter_model')) || 'x-ai/grok-4.1-fast';
+  const apiKey = await getSettingValue(db, 'openrouter_api_key');
+  const model = options?.model || (await getSettingValue(db, 'openrouter_model')) || 'x-ai/grok-4.1-fast';
 
   if (!apiKey) {
     throw new Error('OpenRouter API key not configured');
@@ -56,11 +55,12 @@ export async function generateCompletion(
     throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
   }
 
-  const data = await response.json();
+  const data = await response.json() as { choices: Array<{ message: { content: string } }> };
   return data.choices[0].message.content;
 }
 
 export async function generateArticle(
+  db: DrizzleD1,
   lang: string,
   keyword: string,
   pageType: string,
@@ -83,10 +83,11 @@ Make the content comprehensive, covering all aspects a player would want to know
     },
   ];
 
-  return generateCompletion(messages, { maxTokens: 8192 });
+  return generateCompletion(db, messages, { maxTokens: 8192 });
 }
 
 export async function generateComment(
+  db: DrizzleD1,
   agentPersonality: string,
   pageContext: string,
   lang: string,
@@ -107,10 +108,11 @@ Do NOT repeat points from these existing comments: ${existingComments.slice(0, 5
     },
   ];
 
-  return generateCompletion(messages, { temperature: 0.9, maxTokens: 256 });
+  return generateCompletion(db, messages, { temperature: 0.9, maxTokens: 256 });
 }
 
 export async function generateDiscussion(
+  db: DrizzleD1,
   personas: Array<{ name: string; personality: string }>,
   casinoNames: string[],
   lang: string,
@@ -130,10 +132,9 @@ Make it feel like a real forum discussion with disagreements, recommendations, a
     },
   ];
 
-  const result = await generateCompletion(messages, { maxTokens: 4096 });
+  const result = await generateCompletion(db, messages, { maxTokens: 4096 });
 
   try {
-    // Extract JSON from the response
     const jsonMatch = result.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
@@ -145,6 +146,7 @@ Make it feel like a real forum discussion with disagreements, recommendations, a
 }
 
 export async function generateExpertReview(
+  db: DrizzleD1,
   expertName: string,
   expertBio: string,
   lang: string,
@@ -165,10 +167,11 @@ Be honest and balanced -- mention both pros and cons.`,
     },
   ];
 
-  return generateCompletion(messages, { maxTokens: 8192 });
+  return generateCompletion(db, messages, { maxTokens: 8192 });
 }
 
 export async function generateFaqs(
+  db: DrizzleD1,
   lang: string,
   keyword: string,
   count: number = 8,
@@ -188,7 +191,7 @@ Include the keyword "${keyword}" naturally where it fits.`,
     },
   ];
 
-  const result = await generateCompletion(messages, { maxTokens: 2048 });
+  const result = await generateCompletion(db, messages, { maxTokens: 2048 });
 
   try {
     const jsonMatch = result.match(/\[[\s\S]*\]/);
@@ -202,6 +205,7 @@ Include the keyword "${keyword}" naturally where it fits.`,
 }
 
 export async function translateUiStrings(
+  db: DrizzleD1,
   sourceStrings: Record<string, string>,
   targetLang: string,
 ): Promise<Record<string, string>> {
@@ -216,7 +220,7 @@ export async function translateUiStrings(
     },
   ];
 
-  const result = await generateCompletion(messages, { temperature: 0.3, maxTokens: 4096 });
+  const result = await generateCompletion(db, messages, { temperature: 0.3, maxTokens: 4096 });
 
   try {
     const jsonMatch = result.match(/\{[\s\S]*\}/);
