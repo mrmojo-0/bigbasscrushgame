@@ -7,7 +7,7 @@ interface Expert {
   avatarPath: string | null;
   title: string | null;
   bio: string;
-  credentials: string | null;
+  credentials: string[] | string | null;
 }
 
 interface Props {
@@ -17,7 +17,9 @@ interface Props {
 }
 
 const { expert, locale, updatedDate } = Astro.props;
-const credentials: string[] = expert.credentials ? JSON.parse(expert.credentials) : [];
+const credentials: string[] = Array.isArray(expert.credentials)
+  ? expert.credentials
+  : expert.credentials ? JSON.parse(expert.credentials) : [];
 
 const personSchema = {
   '@context': 'https://schema.org',

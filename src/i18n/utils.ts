@@ -90,32 +90,30 @@ export function formatDate(date: Date | number, locale: Locale): string {
 }
 
 /**
- * Get localized JSON value from a JSON field (stored as string)
+ * Get localized value from object or JSON string
  */
-export function getLocalizedValue(jsonString: string | null, locale: Locale): string {
-  if (!jsonString) return '';
-  try {
-    const parsed = JSON.parse(jsonString);
-    if (typeof parsed === 'string') return parsed;
-    return parsed[locale] || parsed[DEFAULT_LOCALE] || parsed['en'] || '';
-  } catch {
-    return jsonString;
+export function getLocalizedValue(input: string | Record<string, unknown> | null, locale: Locale): string {
+  if (!input) return '';
+  let parsed: any = input;
+  if (typeof input === 'string') {
+    try { parsed = JSON.parse(input); } catch { return input; }
   }
+  if (typeof parsed === 'string') return parsed;
+  return parsed[locale] || parsed[DEFAULT_LOCALE] || parsed['en'] || '';
 }
 
 /**
- * Get localized array from a JSON field
+ * Get localized array from object or JSON string
  */
-export function getLocalizedArray(jsonString: string | null, locale: Locale): string[] {
-  if (!jsonString) return [];
-  try {
-    const parsed = JSON.parse(jsonString);
-    if (Array.isArray(parsed)) return parsed;
-    const localized = parsed[locale] || parsed[DEFAULT_LOCALE] || parsed['en'];
-    return Array.isArray(localized) ? localized : [];
-  } catch {
-    return [];
+export function getLocalizedArray(input: string | string[] | Record<string, unknown> | null, locale: Locale): string[] {
+  if (!input) return [];
+  let parsed: any = input;
+  if (typeof input === 'string') {
+    try { parsed = JSON.parse(input); } catch { return []; }
   }
+  if (Array.isArray(parsed)) return parsed;
+  const localized = parsed[locale] || parsed[DEFAULT_LOCALE] || parsed['en'];
+  return Array.isArray(localized) ? localized : [];
 }
 
 export { LOCALES, DEFAULT_LOCALE, ALL_LOCALES, isValidLocale, type Locale };

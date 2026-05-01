@@ -1,35 +1,36 @@
 ---
-export const prerender = false;
-
 import PageLayout from '../../layouts/PageLayout.astro';
 import CasinoTopList from '../../components/casino/CasinoTopList.astro';
 import FaqSection from '../../components/content/FaqSection.astro';
-import CommentSection from '../../components/interactive/CommentSection.tsx';
 import WaveDecoration from '../../components/ui/WaveDecoration.astro';
 import Button from '../../components/ui/Button.astro';
 import Breadcrumbs from '../../components/seo/Breadcrumbs.astro';
 import ArticleImage from '../../components/ui/ArticleImage.astro';
 import ImageGallery from '../../components/ui/ImageGallery.astro';
-import { type Locale, isValidLocale } from '../../i18n/config';
+import { ALL_LOCALES, type Locale } from '../../i18n/config';
 import { t, getPagePath } from '../../i18n/utils';
 import { websiteSchema, articleSchema, faqSchema } from '../../lib/seo/schema-generators';
-import { getCasinosForLocale } from '../../lib/db/queries';
-import { getDb } from '../../lib/db/index';
+import { getCasinosForLocale } from '../../data/casinos';
 
-const { lang } = Astro.params;
-if (!lang || !isValidLocale(lang)) {
-  return Astro.redirect('/en/', 302);
+export function getStaticPaths() {
+  return ALL_LOCALES.map(locale => ({
+    params: { lang: locale },
+    props: { locale },
+  }));
 }
-const locale = lang as Locale;
 
-const db = getDb(Astro.locals.runtime.env.DB);
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
 
 const title = t(locale, 'hero.title');
 const subtitle = t(locale, 'hero.subtitle');
 const playNowText = t(locale, 'hero.playNow');
 const playFreeText = t(locale, 'hero.playFree');
 
-const casinoResults = await getCasinosForLocale(db, locale);
+const casinoResults = getCasinosForLocale(locale);
 
 // FAQs about Big Bass Crash
 const faqs = [
@@ -270,18 +271,6 @@ const breadcrumbs = [
 
       <!-- FAQ -->
       <FaqSection faqs={faqs} locale={locale} />
-
-      <!-- Comments -->
-      <div class="mt-12">
-        <CommentSection
-          client:visible
-          pageSlug="home"
-          lang={locale}
-          title={t(locale, 'comments.title')}
-          loadMoreText={t(locale, 'comments.loadMore')}
-          noCommentsText={t(locale, 'comments.noComments')}
-        />
-      </div>
     </div>
   </section>
 </PageLayout>

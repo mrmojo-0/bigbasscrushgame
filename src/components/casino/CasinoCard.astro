@@ -13,15 +13,15 @@ interface Casino {
   logoPath: string | null;
   rating: number | null;
   bonusAmount: string | null;
-  welcomeBonus: string | null;
+  welcomeBonus: any;
   freeSpins: string | null;
   minDeposit: string | null;
   license: string | null;
-  paymentMethods: string | null;
-  pros: string | null;
-  cons: string | null;
-  badges: string | null;
-  description: string | null;
+  paymentMethods: any;
+  pros: any;
+  cons: any;
+  badges: any;
+  description: any;
 }
 
 interface Props {
@@ -37,8 +37,12 @@ const { casino, locale, rank, pageSlug, variant = 'full' } = Astro.props;
 const bonusText = getLocalizedValue(casino.welcomeBonus, locale) || casino.bonusAmount || '';
 const pros = getLocalizedArray(casino.pros, locale);
 const cons = getLocalizedArray(casino.cons, locale);
-const payments: string[] = casino.paymentMethods ? JSON.parse(casino.paymentMethods) : [];
-const badges: string[] = casino.badges ? JSON.parse(casino.badges) : [];
+const payments: string[] = Array.isArray(casino.paymentMethods)
+  ? casino.paymentMethods
+  : (casino.paymentMethods ? JSON.parse(casino.paymentMethods) : []);
+const badges: string[] = Array.isArray(casino.badges)
+  ? casino.badges
+  : (casino.badges ? JSON.parse(casino.badges) : []);
 
 const redirectUrl = `/go/${casino.slug}?from=${pageSlug}&lang=${locale}`;
 

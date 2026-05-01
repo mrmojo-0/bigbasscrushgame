@@ -1,39 +1,45 @@
 ---
-export const prerender = false;
-
 import PageLayout from '../../layouts/PageLayout.astro';
 import CasinoTopList from '../../components/casino/CasinoTopList.astro';
 import FaqSection from '../../components/content/FaqSection.astro';
-import CommentSection from '../../components/interactive/CommentSection.tsx';
 import GameDemo from '../../components/interactive/GameDemo.tsx';
 import ExpertProfile from '../../components/content/ExpertProfile.astro';
 import WaveDecoration from '../../components/ui/WaveDecoration.astro';
 import Button from '../../components/ui/Button.astro';
 import Breadcrumbs from '../../components/seo/Breadcrumbs.astro';
 import ArticleImage from '../../components/ui/ArticleImage.astro';
-import { type Locale, isValidLocale } from '../../i18n/config';
+import { ALL_LOCALES, type Locale } from '../../i18n/config';
 import { t, getPagePath } from '../../i18n/utils';
-import { PAGE_SLUGS, getPageIdFromSlug, type PageId } from '../../i18n/slugs';
+import { PAGE_SLUGS, type PageId } from '../../i18n/slugs';
 import { websiteSchema, articleSchema, faqSchema, reviewSchema, softwareAppSchema } from '../../lib/seo/schema-generators';
-import { getCasinosForLocale } from '../../lib/db/queries';
-import { getDb } from '../../lib/db/index';
-import { experts } from '../../lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { getCasinosForLocale } from '../../data/casinos';
+import { getExpertForLocale } from '../../data/experts';
 
-const { lang, slug } = Astro.params;
-if (!lang || !isValidLocale(lang)) {
-  return Astro.redirect('/en/', 302);
+export function getStaticPaths() {
+  const pages: PageId[] = ['play-free', 'where-to-play', 'review'];
+  const paths = [];
+  for (const pageId of pages) {
+    for (const locale of ALL_LOCALES) {
+      const slug = PAGE_SLUGS[pageId][locale];
+      if (slug) {
+        paths.push({
+          params: { lang: locale, slug },
+          props: { locale, pageId },
+        });
+      }
+    }
+  }
+  return paths;
 }
-const locale = lang as Locale;
 
-const pageId = slug ? getPageIdFromSlug(slug, locale) : null;
-if (!pageId || pageId === 'home') {
-  return Astro.redirect(`/${locale}/`, 302);
+interface Props {
+  locale: Locale;
+  pageId: PageId;
 }
 
-const db = getDb(Astro.locals.runtime.env.DB);
+const { locale, pageId } = Astro.props;
 
-const casinoResults = await getCasinosForLocale(db, locale);
+const casinoResults = getCasinosForLocale(locale);
 
 // Page-specific content configuration
 const pageConfig = {
@@ -82,15 +88,7 @@ if (!config) {
 
 const pageUrl = getPagePath(pageId, locale);
 
-// Expert data for review page - fetch from DB with fallback
-const expertFromDb = await db.select().from(experts).where(eq(experts.lang, locale)).get();
-const expertData = expertFromDb || {
-  name: 'Expert',
-  avatarPath: '/images/experts/default.jpg',
-  title: 'iGaming Analyst',
-  bio: 'Our expert has extensive experience in the online gambling industry, specializing in crash games, slots analysis, and casino reviews.',
-  credentials: '["Industry Expert","Casino Reviewer","Game Analyst"]',
-};
+const expertData = getExpertForLocale(locale);
 
 const buildDate = new Date().toISOString().split('T')[0];
 const buildDateFormatted = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
@@ -318,21 +316,10 @@ const overallScore = 8.7;
         </div>
       </section>
 
-      <!-- FAQ & Comments -->
+      <!-- FAQ -->
       <section class="bg-ocean-900">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <FaqSection faqs={config.faqs} locale={locale} />
-
-          <div class="mt-12">
-            <CommentSection
-              client:visible
-              pageSlug="play-free"
-              lang={locale}
-              title={t(locale, 'comments.title')}
-              loadMoreText={t(locale, 'comments.loadMore')}
-              noCommentsText={t(locale, 'comments.noComments')}
-            />
-          </div>
         </div>
       </section>
     </>
@@ -434,21 +421,10 @@ const overallScore = 8.7;
         </div>
       </section>
 
-      <!-- FAQ & Comments -->
+      <!-- FAQ -->
       <section class="bg-ocean-900">
         <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <FaqSection faqs={config.faqs} locale={locale} />
-
-          <div class="mt-12">
-            <CommentSection
-              client:visible
-              pageSlug="where-to-play"
-              lang={locale}
-              title={t(locale, 'comments.title')}
-              loadMoreText={t(locale, 'comments.loadMore')}
-              noCommentsText={t(locale, 'comments.noComments')}
-            />
-          </div>
         </div>
       </section>
     </>
@@ -614,18 +590,6 @@ const overallScore = 8.7;
 
           <!-- FAQ -->
           <FaqSection faqs={config.faqs} locale={locale} />
-
-          <!-- Comments -->
-          <div class="mt-12">
-            <CommentSection
-              client:visible
-              pageSlug="review"
-              lang={locale}
-              title={t(locale, 'comments.title')}
-              loadMoreText={t(locale, 'comments.loadMore')}
-              noCommentsText={t(locale, 'comments.noComments')}
-            />
-          </div>
         </div>
       </section>
     </>

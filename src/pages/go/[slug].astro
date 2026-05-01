@@ -1,20 +1,19 @@
 ---
-export const prerender = false;
+import { CASINOS } from '../../data/casinos';
 
-import { getDb } from '../../lib/db';
-import { casinos } from '../../lib/db/schema';
-import { eq } from 'drizzle-orm';
+export function getStaticPaths() {
+  return CASINOS.map(c => ({ params: { slug: c.slug }, props: { brandId: c.brandId } }));
+}
+
+interface Props {
+  brandId: string;
+}
 
 const { slug } = Astro.params;
-const from = Astro.url.searchParams.get('from') || 'direct';
-const lang = Astro.url.searchParams.get('lang') || 'en';
+const { brandId } = Astro.props;
 
-const db = getDb(Astro.locals.runtime.env.DB);
-const casino = slug ? await db.select().from(casinos).where(eq(casinos.slug, slug)).get() : null;
-const brandId = casino?.brandId || slug || 'unknown';
-
-const keyword = `${from}_${lang}`;
-const trackingUrl = `https://pixlclick.click/click?key=929139560bb74e2d82b65e0f942edc99&creative=${brandId}&keyword=${keyword}`;
+// Static fallback URL (no query params at build time). Client-side JS rewrites with from/lang.
+const fallbackUrl = `https://pixlclick.click/click?key=929139560bb74e2d82b65e0f942edc99&creative=${brandId}&keyword=direct_en`;
 ---
 
 <html lang="en">
@@ -22,7 +21,7 @@ const trackingUrl = `https://pixlclick.click/click?key=929139560bb74e2d82b65e0f9
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
-    <meta http-equiv="refresh" content={`3;url=${trackingUrl}`} />
+    <meta http-equiv="refresh" content={`3;url=${fallbackUrl}`} />
     <title>Redirecting...</title>
     <style>
       * {
@@ -148,7 +147,7 @@ const trackingUrl = `https://pixlclick.click/click?key=929139560bb74e2d82b65e0f9
         <h1>Redirecting to <span class="casino-name">{slug}</span></h1>
         <p class="subtitle">You are being redirected to your selected casino. Please wait a moment...</p>
         <div class="progress-bar"><div class="progress-fill"></div></div>
-        <a href={trackingUrl} class="fallback-link" rel="noopener noreferrer nofollow">
+        <a id="fallback" href={fallbackUrl} class="fallback-link" rel="noopener noreferrer nofollow">
           <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
           </svg>
@@ -158,7 +157,14 @@ const trackingUrl = `https://pixlclick.click/click?key=929139560bb74e2d82b65e0f9
       </div>
     </div>
 
-    <script define:vars={{ trackingUrl }}>
+    <script define:vars={{ brandId }}>
+      const params = new URLSearchParams(window.location.search);
+      const from = params.get('from') || 'direct';
+      const lang = params.get('lang') || 'en';
+      const keyword = from + '_' + lang;
+      const trackingUrl = 'https://pixlclick.click/click?key=929139560bb74e2d82b65e0f942edc99&creative=' + brandId + '&keyword=' + keyword;
+      const fallback = document.getElementById('fallback');
+      if (fallback) fallback.href = trackingUrl;
       setTimeout(function() { window.location.href = trackingUrl; }, 3000);
     </script>
   </body>
